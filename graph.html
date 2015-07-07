@@ -44,6 +44,13 @@
         </form></label>
 
         <div>
+          <span>Zoom: </span><select id='zoom'>
+            <option value="1">1X</option>
+            <option value="2">2X</option>
+            <option value="3">3X</option>
+            <option value="4">4X</option>
+            <option value="5">5X</option>
+          </select>
         <form id= "radius"> <span>Radius:</span> <input type = 'text' name ='radius' id='radiustext'></form>
         <select id='nodeType'>
           <option value="walk">Walk</option>
@@ -57,9 +64,9 @@
         <span id="stair1">Floors: </span><input type='text'id='floorset' name='floorset' size='10'>
         </form>
          <form id="vertical">
-          <input type='radio' name="dirnodes" value='u'checked='checked'>Up
+          <input type='radio' name="dirnodes" value='u'>Up
           <input type='radio' name="dirnodes" value='d'>Down   
-          <input type='radio' name="dirnodes" value='b'>Both   
+          <input type='radio' name="dirnodes" value='b'checked='checked'>Both   
         </form>
         <form id="gender">
           <input type='radio' name='gender' value='F'>Female
