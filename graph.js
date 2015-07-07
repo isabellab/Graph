@@ -136,8 +136,8 @@ function changeCanvas(){
       height = this.height
 
       //resizing the uploaded image
-      height = height * 1000 / width;
-      width = 1000;
+      height = height * 1000 / width * document.getElementById('zoom').value;
+      width = 1000 * document.getElementById('zoom').value;
       newheight = height;
 
       //change canvas
@@ -227,6 +227,9 @@ function display(id, style) {
                 if(editlist[i].checked == true) {
                   var selectedE = editlist[i].value;
                   edit = new edits[selectedE]; 
+                  if (editlist[i].value == 'resize'){
+                    display('snapping', 'block');
+                  }
                 }
               }
             }
@@ -277,7 +280,7 @@ function colorFind(node_id, new_node) {
    else if (nodeType =='room')
      return 'red';
    else if (nodeType =='bathroom') {
-    if (new_id == node_id) { 
+    if (new_node) { 
       if (document.getElementsByName("gender")[0].checked) gender = 'F';
       else gender = 'M';
     } 
@@ -575,22 +578,7 @@ function updateSet(news, i){
 };
 
 function updateFloor(newf, i){
-
- // nodeID(i).floorset = newf;
-
- // array of floors in format like 1, 2, 4
-  var string = newf;
-  var parts;
-  if (string.indexOf(", ") != -1){
-    parts = string.split(",");
-    for(x in parts){
-      if (x.indexOf(" ")!= -1){
-        x = x.replace(/^\s+|\s+$/g,'');
-      }
-    }
-  }
-  nodeID(i).floorset = parts;
-
+  nodeID(i).floorset = newf;
 };
 
 function updateVert(){
@@ -670,14 +658,14 @@ function showStairs(status, id){
     // Is this right? 
     if (status == "none"){
         document.example.popset.value = ""; 
-        stairSpec(status, "");
-        elevatorSpec(status, "");
+        stairSpec(status);
+        elevatorSpec(status);
 
     }
     //show elevator, hide stairs (FLOOR SETS)
     else if(nodeID(id).type == "elevator"){ 
-      elevatorSpec(status,id);
-      stairSpec('none', "");
+      elevatorSpec(status);
+      stairSpec('none');
     }
     //show stairs, hide elevator (THIS IS UP DOWN)
     else{
@@ -697,53 +685,45 @@ function showStairs(status, id){
     }
 
     function stairSpec(stat, id){
-     
+      alert("hi stairs"+ stat);
       display('popup', 'stat');
       display('popdown', 'stat');
       display('popboth', 'stat');
       display('no8', 'stat');
       display('no9', 'stat');
       display('no10', 'stat');
-      display('no11', 'stat');
-
-      var radiobtn1 = document.getElementById("popup");
-      var radiobtn2 = document.getElementById("popdown");
-      var radiobtn3  = document.getElementById("popboth");
-
-      radiobtn1.checked = false; 
-      radiobtn2.checked = false; 
-      radiobtn3.checked = false; 
-
 
        //RADIOBUTTONS GO HERE
       if (stat != "none"){ 
+        var radiobtn1 = document.getElementById("popup");
+        var radiobtn2 = document.getElementById("popdown");
+        var radiobtn3  = document.getElementById("popboth");
+        var dir = nodeID(id).direction;
         
-        dir = nodeID(id).vertical;
-        
-        if (dir== "U") {
-          radiobtn1.checked = true; 
-        }
-        else if (dir == "D") {
-          radiobtn2.checked = true;
-        }
-        else {
-          radiobtn3.checked = true;
-        }
+        if (dir== "U") radiobtn1.checked = true; 
+        else if (dir == "D") radiobtn2.checked = true;
+        else radiobtn3.checked = true;
+      }
+      // set radiobuttons off b/c none
+      else{
+        radiobtn1.checked = false; 
+        radiobtn2.checked = false; 
+        radiobtn3.checked = false; 
       }
     };
 
     function elevatorSpec(stat, id){
+        alert("hi ele"+ stat);
         display('popfloors', 'stat');
         display('no7', 'stat');
-
         if (stat != "none"){
           document.example.popfloors.value = nodeID(id).floorset;
-          document.example.popset.value = nodeID(id).stairset;
         }
         else{
           document.example.popfloors.value = "";
         }
     };
+
 };
 
  // UNDO AND REDO TOOLS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -776,7 +756,7 @@ function undoIt(ev) {
     //add node and edges back to arrays
     nodes.push(removed);
     for (var i = 0; i < removed_edges.length; i++) {
-      edges.push(removed_edges[i]);
+      edges.push(new Edge(removed_edges[i]));
       draw_edge(nodeID(removed_edges[i].coords[0]).coords[0], nodeID(removed_edges[i].coords[0]).coords[1], nodeID(removed_edges[i].coords[1]).coords[0], nodeID(removed_edges[i].coords[1]).coords[1], 'black', 2); //redraw edge
     }
 
@@ -793,6 +773,33 @@ function undoIt(ev) {
 
     //add to redo
     redo.push(['de', removed]);
+   }
+
+   else if (oops[0] == 'an') { //undo auto node --  ['an', node id, endpoint node id, endpoint node id]
+    var new_node = nodeID(oops[1]);
+    var sideA = nodeID(oops[2]);
+    var sideB = nodeID(oops[3]);
+
+    //remove node
+    removeNode(oops[1]);
+
+    //remove edges
+    for (var i = 0; i < edges.length; i++) {
+      if (edges[i].coords[0] == oops[1] && (edges[i].coords[1] == oops[2] || edges[i].coords[1] == oops[3])) {
+        removeEdge(i);
+      }
+    }
+
+    //add edge
+    draw_edge(sideA.coords[0], sideA.coords[1], sideB.coords[0], sideB.coords[1], 'black', 2);
+    draw_node(sideA.coords[0], sideA.coords[1], radius, colorFind(oops[2], false), 1);
+    draw_node(sideB.coords[0], sideB.coords[1], radius, colorFind(oops[3], false), 1);
+    edges.push(new Edge([oops[2], oops[3]]));
+    img_update();
+
+    oops.push(new_node);
+    redo.push(oops);
+    img_update();
    }
 
    else { //undoing resize
@@ -864,11 +871,44 @@ function redoIt(ev) {
         remove_id = i;
     }
 
-    removeEdge(remove_id);
+    undo.push(removeEdge(remove_id));
   }
 
   else if (jk[0] == 'dn') {
-    removeNode(jk[1]);
+    undo.push(removeNode(jk[1]));
+  }
+
+  else if (jk[0] == 'an') { //redo autonode -- ['an', node id, endpoint node id, endpoint node id, node to add]
+    //remove edge
+    var node_id = jk[1];
+    var sideA = jk[2];
+    var sideB = jk[3];
+    var add_node = jk[4];
+
+    var to_remove;
+    for (var i = 0; i < edges.length; i++) {
+      if (edges[i].coords[1] == sideA && edges[i].coords[0] == sideB || edges[i].coords[0] == sideA && edges[i].coords[1] == sideB)
+        to_remove = i;
+    }
+    removeEdge(to_remove);
+
+    var nodeA = nodeID(sideA);
+    var nodeB = nodeID(sideB);
+
+    //add edges
+    edges.push(new Edge([node_id, sideA]));
+    edges.push(new Edge([node_id, sideB]));
+    draw_edge(add_node.coords[0], add_node.coords[1], nodeA.coords[0], nodeA.coords[1], 'black', 2);
+    draw_edge(add_node.coords[0], add_node.coords[1], nodeB.coords[0], nodeB.coords[1], 'black', 2);
+
+    //add node
+    nodes.push(new Node(node_id,[add_node.coords[0], add_node.coords[1]], 'walk'));
+    draw_node(add_node.coords[0], add_node.coords[1], radius, 'black', 1);
+    draw_node(nodeA.coords[0], nodeA.coords[1], radius, colorFind(sideA, false), 1);
+    draw_node(nodeB.coords[0], nodeB.coords[1], radius, colorFind(sideB, false), 1);
+
+    undo.push([jk[0], jk[1], jk[2], jk[3]]);
+    img_update();
   }
 
   else { //REDO RESIZE
@@ -1293,12 +1333,12 @@ function regionDetection(x, y) {
     var range = 3;
 
     //check range
-    if ((Math.min(coordsA[0], coordsB[0]) - range) <= x <= (Math.max(coordsA[0], coordsB[0]) + range) && //x coords
-        (Math.min(coordsA[1], coordsB[1]) - range) <= y <= (Math.max(coordsA[1], coordsB[1]) + range)) { //y coords
+    if ((Math.min(coordsA[0], coordsB[0]) - range - 2) <= x && x <= (Math.max(coordsA[0], coordsB[0]) + range + 2) && //x coords
+        (Math.min(coordsA[1], coordsB[1]) - range - 2) <= y && y <= (Math.max(coordsA[1], coordsB[1]) + range + 2)) { //y coords
       //find distance to line
       var m = (coordsA[1] - coordsB[1]) / (coordsA[0] - coordsB[0]);
       var dist = Math.abs(y - coordsA[1] - m * x + m * coordsA[0]) / Math.sqrt(1 + m * m);
-      if (dist < range && dist + radius + range < distance) {
+      if (dist < range && dist + radius + range + 2 < distance) {
         closest = 'e';
         distance = dist;
         location = i;
@@ -1363,7 +1403,7 @@ edits.deleted = function() {
          removeEdge(remove_id);
         }
         else if (closest[0] == 'n') {
-          removeNode(nodes[remove_id].id);
+          undo.push(removeNode(nodes[remove_id].id));
         }
       }
     }
@@ -1406,7 +1446,7 @@ function removeNode(remove_id) {
   remove_nodes(remove.coords); //remove node from screen
 
   //ADD TO UNDO
-  undo.push(['dn', remove, removed_edges]);
+  return ['dn', remove, removed_edges];
   img_update();
 }
 
@@ -1415,22 +1455,43 @@ function removeEdge(remove_id) {
   remove_edges(nodeID(remove.coords[0]).coords, nodeID(remove.coords[1]).coords, remove.coords[0], remove.coords[1]); //remove from screen
          
   //ADD TO UNDO
-  undo.push(['de', remove]);
+  return ['de', remove];
   img_update();
 }
+
+
 
 edits.autonode = function() {
   var edit = this;
   this.started = false;
 
+  var closest, x, y;
+
   this.mousedown = function (ev) {
     edit.started = true;
-    
   }
 
   this.mousemove = function (ev) {
     if (!edit.started) {
       return;
+    }
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    x = ev._x;
+    y = ev._y;
+    closest = regionDetection(ev._x, ev._y);
+    if (closest[0] != 'none') {
+      if (closest[0] == 'e') {
+        var endpoints = edges[closest[1]].coords;
+        var a = nodeID(endpoints[0]).coords;
+        var b = nodeID(endpoints[1]).coords;
+        var u = (x - a[0])*(b[0] - a[0]) + (y - a[1])*(b[1] - a[1]);
+        var udenom = (b[0] - a[0])*(b[0] - a[0]) + (b[1] - a[1])*(b[1] - a[1]);
+        u /= udenom;
+        x = a[0] + u * (b[0] - a[0]);
+        y = a[1] + u * (b[1] - a[1]);
+
+        draw_node(x, y, radius, 'black', 1); //assuming walking node
+      }
     }
   };
 
@@ -1438,32 +1499,164 @@ edits.autonode = function() {
     if (edit.started) {
       edit.mousemove(ev);
       edit.started = false;
+
+      if (closest[0] != 'none') {
+        if (closest[0] == 'e') {
+          //add node
+          nodes.push(new Node(new_id,[x, y], 'walk'));
+          //remove edge, add two new edges
+          coords = edges[closest[1]].coords;
+          removeEdge(closest[1]);
+          edges.push(new Edge([new_id, coords[0]]));
+          edges.push(new Edge([new_id, coords[1]]));
+          new_id++;
+
+          //draw
+          draw_edge(x, y, nodeID(coords[0]).coords[0], nodeID(coords[0]).coords[1], 'black', 2);
+          draw_edge(x, y, nodeID(coords[1]).coords[0], nodeID(coords[1]).coords[1], 'black', 2);
+          draw_node(x, y, radius, 'black', 1);
+          draw_node(nodeID(coords[0]).coords[0], nodeID(coords[0]).coords[1], radius, colorFind(coords[0]), 1);
+          draw_node(nodeID(coords[1]).coords[0], nodeID(coords[1]).coords[1], radius, colorFind(coords[1]), 1);
+
+          img_update();
+
+          undo.push(['an', new_id - 1, coords[0], coords[1]]);
+        }
+      }
     }
   }
 }
+
 
 edits.straightline = function() {
   var edit = this;
   this.started = false;
 
-  this.mousedown = function (ev) {
-    edit.started = true;
-    
-  }
+  var closest;
+   var remove;
+   var remove_id;
+   var selected_node;
+   var selected_edge;
 
-  this.mousemove = function (ev) {
-    if (!edit.started) {
-      return;
-    }
-  };
+   this.mousedown = function (ev) {
+    edit.started = true;
+    selected_node = [];
+    selected_edge = [];
+   }
+
+   this.mousemove = function (ev) {
+     if (!edit.started) {
+       return;
+     }
+     //region detection
+     closest = regionDetection(ev._x, ev._y);
+     if (closest != 'none') { //if returned something
+      remove_id = closest[1];
+
+       //highlight node or edge
+       if (closest[0] == 'e') {
+        var contains = false;
+        for (var i = 0; i < selected_edge.length; i++) {
+          if (selected_edge[i] == closest[1])
+            contains = true;
+        }
+        if (!contains) { //doesnt already contain
+          selected_edge.push(closest[1]);
+          remove = edges[closest[1]];
+          draw_edge(nodeID(remove.coords[0]).coords[0], nodeID(remove.coords[0]).coords[1], nodeID(remove.coords[1]).coords[0], nodeID(remove.coords[1]).coords[1], 'yellow', 2);
+         }
+       }
+       else if (closest[0] == 'n') {
+        var contains = false;
+        remove = nodes[remove_id];
+        for (var i = 0; i < selected_node.length; i++) {
+          if (selected_node[i].id == remove.id)
+            contains = true;
+        }
+        if (!contains) {
+          selected_node.push(remove);
+          draw_node(remove.coords[0], remove.coords[1], radius, 'yellow', 1);
+        }
+       }
+     }
+   };
 
   this.mouseup = function (ev) {
     if (edit.started) {
       edit.mousemove(ev);
       edit.started = false;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      if ((selected_node.length == (selected_edge.length + 1)) && (selected_edge.length > 0)) { //valid selection
+        //STRAIGHTEN
+        alert('lets be creative!')
+        
+
+        //remove all edges and nodes
+        for (var i = 0; i < selected_edge.length; i++) {
+          var nodeA = nodeID(edges[selected_edge[i]].coords[0]);
+          var nodeB = nodeID(edges[selected_edge[i]].coords[1]);
+          remove_edges(nodeA.coords, nodeB.coords, nodeA.id, nodeB.id); //remove from screen
+        }
+        for (var i = 0; i < selected_node.length; i++) {
+          remove_nodes(selected_node[i].coords);
+        }
+
+        //find node endpoints
+        var result = {};
+        var endpoints = [];
+        for (var i = 0; i < selected_edge.length; i++) {
+          var coords = edges[selected_edge[i]].coords;
+            if (!(coords[0] in result))
+                result[coords[0]] = 1;
+            else {
+              result[coords[0]]++;
+            }
+            if (!(coords[1] in result))
+                result[coords[1]] = 1;
+            else {
+              result[coords[1]]++;
+            }
+        }
+
+        for (var id in result) {
+          if (result[id] == 1)
+            endpoints.push(id);
+        }
+
+        //find line of best fit
+        //convert each other selected node's coords to new coords on line
+        for (var i = 0; i < selected_node.length; i++) {
+          var x = selected_node[i].coords[0];
+          var y = selected_node[i].coords[1];
+          var a = nodeID(endpoints[0]).coords;
+          var b = nodeID(endpoints[1]).coords;
+          var u = (x - a[0])*(b[0] - a[0]) + (y - a[1])*(b[1] - a[1]);
+          var udenom = (b[0] - a[0])*(b[0] - a[0]) + (b[1] - a[1])*(b[1] - a[1]);
+          u /= udenom;
+          x = a[0] + u * (b[0] - a[0]);
+          y = a[1] + u * (b[1] - a[1]);
+
+          selected_node[i].coords[0] = x;
+          selected_node[i].coords[1] = y;
+        }
+
+        //draw new nodes and edges
+        for (var i = 0; i < selected_edge.length; i++) {
+          var nodeA = nodeID(edges[selected_edge[i]].coords[0]);
+          var nodeB = nodeID(edges[selected_edge[i]].coords[1]);
+          draw_edge(nodeA.coords[0], nodeA.coords[1], nodeB.coords[0], nodeB.coords[1], 'black', 2); //remove from screen
+        }
+        for (var i = 0; i < selected_node.length; i++) {
+          draw_node(selected_node[i].coords[0], selected_node[i].coords[1], radius, colorFind(selected_node[i].id), 1);
+        }
+
+        img_update();
+      }
     }
   }
 }
+
+
 
  // EVENT LISTENERS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  if (window.addEventListener) {
